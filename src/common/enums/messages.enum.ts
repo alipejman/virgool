@@ -2,6 +2,7 @@ export enum AuthMessage {
     NotFoundAccount = 'حساب کاربری یافت نشد',
     InValidType = 'نوع ورودی نامعتبر است',
     ExistAccount = 'حساب کاربری وجود دارد',
+    ExpiredCode = 'کد منقضی شده است',
 }
 
 export enum BadRequestExeption {

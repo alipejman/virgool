@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  Inject,
   Injectable,
   UnauthorizedException,
 } from "@nestjs/common";
@@ -17,9 +18,15 @@ import { UserEntity } from "../user/entities/user.entity";
 import { Repository } from "typeorm";
 import { ProfileEntity } from "../user/entities/profile.entity";
 import { otpEntity } from "../user/entities/otp.entity";
-import { IsEmail, IsMobilePhone } from "class-validator";
+import { JwtService } from "@nestjs/jwt";
+import { tokensService } from "./tokens.service";
+import {  Request, Response } from "express";
+import { cookieKeys } from "src/common/enums/cookie.enum";
+import { AuthResponse } from "./types/response";
+import { Scope } from "@nestjs/common";
+import { REQUEST } from "@nestjs/core";
 
-@Injectable()
+@Injectable({ scope: Scope.REQUEST })
 export class AuthService {
   constructor(
     @InjectRepository(UserEntity)
@@ -27,20 +34,22 @@ export class AuthService {
     @InjectRepository(ProfileEntity)
     private readonly profileRepository: Repository<ProfileEntity>,
     @InjectRepository(otpEntity)
-    private readonly otpRepository: Repository<otpEntity>
+    private readonly otpRepository: Repository<otpEntity>,
+    private tokenService: tokensService,
+    @Inject(REQUEST) private request: Request,
   ) {}
 
   // Check user existence
-  async userExistence(authDto: AuthDto) {
+  async userExistence(authDto: AuthDto, res: Response) {
     const { method, type, username } = authDto;
-    console.log(username);
-    console.log(type);
-    console.log(method);
+    let result: AuthResponse;
     switch (type) {
       case AuthType.Login:
-        return this.login(method, username);
+        result = await this.login(method, username);
+        return this.sendResponse(res, result);
       case AuthType.Register:
-        return this.register(method, username);
+        result = await this.register(method, username);
+        return this.sendResponse(res, result);
       default:
         throw new UnauthorizedException(AuthMessage.InValidType);
     }
@@ -103,8 +112,10 @@ export class AuthService {
     let user: UserEntity = await this.checkExistUser(method, validUsername);
     if (!user) throw new UnauthorizedException(AuthMessage.NotFoundAccount);
     const otp = await this.saveOtp(user.id);
+    const token = this.tokenService.craeteToken({ userId: user.id });
     return {
-      Code: otp.code,
+      code: otp.code,
+      token,
     };
   }
 
@@ -123,11 +134,29 @@ export class AuthService {
     user.username = `user-${user.id}`;
     await this.userRepository.save(user);
     const otp = await this.saveOtp(user.id);
+    const token = this.tokenService.craeteToken({ userId: user.id });
     return {
-      Code: otp.code,
+      code: otp.code,
+      token,
     };
   }
 
+  // Send Response
+  async sendResponse(res: Response, result: AuthResponse) {
+    const { token, code } = result;
+    res.cookie(cookieKeys.xhssp, token, {
+      httpOnly: true,
+      maxAge: 1000 * 60 * 2,
+    });
+    return res.json({
+      code,
+    });
+  }
+
   // Check OTP
-  async checkOtp() {}
+  async checkOtp(code: string) {
+    const token = this.request.cookies?.[cookieKeys.xhssp];
+    if(!token) throw new UnauthorizedException(AuthMessage.ExistAccount);
+    return token;
+  }
 }
