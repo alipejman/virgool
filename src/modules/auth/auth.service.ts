@@ -157,6 +157,27 @@ export class AuthService {
   async checkOtp(code: string) {
     const token = this.request.cookies?.[cookieKeys.xhssp];
     if(!token) throw new UnauthorizedException(AuthMessage.ExistAccount);
-    return token;
+    const {userId} =  this.tokenService.verifyToken(token);
+    const otp = await this.otpRepository.findOneBy({ userId});
+    if(!otp) throw new UnauthorizedException(AuthMessage.ExistAccount);
+    const now = new Date();
+    if(now > otp.expiresIn) throw new UnauthorizedException(AuthMessage.InvaloToken);
+    if(otp.code !== code) throw new UnauthorizedException(AuthMessage.InvaloToken);
+    const accessToken = this.tokenService.createAccessToken({userId});
+    return {
+      message: AuthMessage.SignIn,
+      accessToken,
+    }; 
   }
+
+
+  
+  async validateAccessToken(token: string) {
+    const { userId } = this.tokenService.verifyAccessToken(token);
+    const user = await this.userRepository.findOneBy({ id: userId });
+    if (!user) throw new UnauthorizedException(AuthMessage.InvaloToken);
+    return user;
+}
+
+
 }

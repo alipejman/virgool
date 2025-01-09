@@ -1,36 +1,58 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
-import { UserService } from './user.service';
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
-import { ApiTags } from '@nestjs/swagger';
+import {
+  Body,
+  Controller,
+  Get,
+  ParseFilePipe,
+  Put,
+  Req,
+  UploadedFiles,
+  UseGuards,
+  UseInterceptors,
+} from "@nestjs/common";
+import { UserService } from "./user.service";
+import { ApiBearerAuth, ApiConsumes, ApiTags } from "@nestjs/swagger";
+import { ProfileDto } from "./dto/profile.dto";
+import { SwaggerForm } from "src/common/enums/swaggerForm.enum";
+import {  FileFieldsInterceptor, FilesInterceptor } from "@nestjs/platform-express";
+import { multerStorage } from "src/common/utils/multer.utils";
+import { AuthGuard } from "../auth/guards/auth.gurad";
+import { avatar } from "./types/files";
+import { uploadedOptionalFiles } from "src/common/decorators/uploadFiles.decorator";
+import { Request } from "express";
+import { authDecorator } from "src/common/decorators/auth.decorator";
 
-@Controller('user')
-@ApiTags('User')
+@Controller("user")
+@ApiTags("User")
+@authDecorator()
+
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
-  @Post()
-  create(@Body() createUserDto: CreateUserDto) {
-    return this.userService.create(createUserDto);
+
+
+  @Put("/profile")
+  @ApiConsumes(SwaggerForm.Multipart)
+  @UseInterceptors(FileFieldsInterceptor([
+    {name: "avatar", maxCount: 1}
+  ], {
+    storage: multerStorage("avatar")
+  }))
+  changeProfile(
+    @uploadedOptionalFiles()
+    files: avatar,
+    @Body() profileDto: ProfileDto
+  ) {
+    console.log("Uploaded Files:", files); // لاگ فایل‌های آپلود شده
+    try {
+      return this.userService.changeProfile(files, profileDto);
+    } catch (error) {
+      console.error("Error saving profile:", error);
+    }
   }
 
-  @Get()
-  findAll() {
-    return this.userService.findAll();
+  @Get('/profile')
+  getUserProfile(@Req() request: Request) {
+      return this.userService.GetProfile();
   }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.userService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-    return this.userService.update(+id, updateUserDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.userService.remove(+id);
-  }
+  
 }
