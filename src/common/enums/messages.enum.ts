@@ -24,5 +24,13 @@ export enum CategoryMessage {
 }
 
 export enum User {
-    UpdatedProfile= "پروفایل شما با موفقیت بروز شد"
+    UpdatedProfile= "پروفایل شما با موفقیت بروز شد",
+    ExistEmail= "این ایمیل قبلا ثبت شده است!",
+    ExistPhone= "موبایل مورد نظر موجود میباشد",
+    ExistUsername= "نام کاربری قبلا شده"
+}
+
+export enum publicMessage {
+    sendOtp= "کد با موفقیت ارسال شد ",
+    somthinWrong= "خطایی پیش آمده مجددا تلاش کنید"
 }

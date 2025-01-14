@@ -25,6 +25,7 @@ import { cookieKeys } from "src/common/enums/cookie.enum";
 import { AuthResponse } from "./types/response";
 import { Scope } from "@nestjs/common";
 import { REQUEST } from "@nestjs/core";
+import { CookiesOptionToken } from "src/common/utils/cookie.utils";
 
 @Injectable({ scope: Scope.REQUEST })
 export class AuthService {
@@ -87,8 +88,8 @@ export class AuthService {
   }
 
   // save OTP
-  async saveOtp(userId: number) {
-    const code = Math.floor(1000 + Math.random() * 9000).toString();
+  async saveOtp(userId: number, method: AuthMethod) {
+    const code = Math.floor(10000 + Math.random() * 90000).toString();
     const expiresIn = new Date(Date.now() + 60000);
     let existsOtp = false;
     let otp = await this.otpRepository.findOneBy({ userId });
@@ -96,8 +97,9 @@ export class AuthService {
       existsOtp = true;
       otp.code = code;
       otp.expiresIn = expiresIn;
+      otp.method = method;
     } else {
-      otp = await this.otpRepository.create({ code, expiresIn, userId });
+      otp = await this.otpRepository.create({ code, expiresIn, userId, method });
     }
     otp = await this.otpRepository.save(otp);
     if (!existsOtp) {
@@ -111,7 +113,7 @@ export class AuthService {
     const validUsername = this.userNameValidation(method, username);
     let user: UserEntity = await this.checkExistUser(method, validUsername);
     if (!user) throw new UnauthorizedException(AuthMessage.NotFoundAccount);
-    const otp = await this.saveOtp(user.id);
+    const otp = await this.saveOtp(user.id, method);
     const token = this.tokenService.craeteToken({ userId: user.id });
     return {
       code: otp.code,
@@ -133,7 +135,7 @@ export class AuthService {
     user = await this.userRepository.save(user);
     user.username = `user-${user.id}`;
     await this.userRepository.save(user);
-    const otp = await this.saveOtp(user.id);
+    const otp = await this.saveOtp(user.id, method);
     const token = this.tokenService.craeteToken({ userId: user.id });
     return {
       code: otp.code,
@@ -144,10 +146,7 @@ export class AuthService {
   // Send Response
   async sendResponse(res: Response, result: AuthResponse) {
     const { token, code } = result;
-    res.cookie(cookieKeys.xhssp, token, {
-      httpOnly: true,
-      maxAge: 1000 * 60 * 2,
-    });
+    res.cookie(cookieKeys.xhssp, token, CookiesOptionToken());
     return res.json({
       code,
     });
@@ -164,6 +163,15 @@ export class AuthService {
     if(now > otp.expiresIn) throw new UnauthorizedException(AuthMessage.InvaloToken);
     if(otp.code !== code) throw new UnauthorizedException(AuthMessage.InvaloToken);
     const accessToken = this.tokenService.createAccessToken({userId});
+    if(otp.method === AuthMethod.Email) {
+      await this.userRepository.update({id: userId}, {
+        verify_email: true
+      })
+    } else if(otp.method === AuthMethod.Phone) {
+      await this.userRepository.update({id: userId}, {
+        verify_phone: true
+      })
+    }
     return {
       message: AuthMessage.SignIn,
       accessToken,

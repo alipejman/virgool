@@ -1,4 +1,4 @@
-import { Inject, Injectable, Scope, UnauthorizedException } from "@nestjs/common";
+import { BadRequestException, ConflictException, Inject, Injectable, Scope, UnauthorizedException } from "@nestjs/common";
 import { ProfileDto } from "./dto/profile.dto";
 import { InjectRepository } from "@nestjs/typeorm";
 import { UserEntity } from "./entities/user.entity";
@@ -7,8 +7,14 @@ import { ProfileEntity } from "./entities/profile.entity";
 import { Request } from "express";
 import { isDate } from "class-validator";
 import { userGender } from "./enums/gender.enum";
-import { User } from "src/common/enums/messages.enum";
+import { AuthMessage, publicMessage, User } from "src/common/enums/messages.enum";
 import { avatar } from "./types/files";
+import { AuthService } from "../auth/auth.service";
+import { tokensService } from "../auth/tokens.service";
+import { cookieKeys } from "src/common/enums/cookie.enum";
+import { AuthMethod } from "../auth/enums/method.enum";
+import { otpEntity } from "./entities/otp.entity";
+import { userInfo } from "os";
 
 @Injectable({ scope: Scope.REQUEST })
 export class UserService {
@@ -17,7 +23,11 @@ export class UserService {
     private userRepository: Repository<UserEntity>,
     @InjectRepository(ProfileEntity)
     private profileRepository: Repository<ProfileEntity>,
-    @Inject("REQUEST") private request: Request
+    @Inject("REQUEST") private request: Request,
+    private authService: AuthService,
+    private tokenService: tokensService,
+    @InjectRepository(otpEntity)
+    private otpRepository: Repository<otpEntity>
   ) {}
 
 
@@ -70,6 +80,82 @@ export class UserService {
 
 
 
+  async changeEmail(email: string) {
+    const { id } = this.request.user;
+    const user = await this.userRepository.findOneBy({email})
+    if(user && user.id !== id) {
+        throw new ConflictException(User.ExistEmail)
+    } else if(user && user.id == id) {
+        return {
+            message: User.UpdatedProfile
+        }
+    }
+    await this.userRepository.update({id}, {new_email: email})
+    const otp = await this.authService.saveOtp(id, AuthMethod.Email)
+    const token = this.tokenService.createEmailToken({email});
+    return {
+        code: otp.code,
+        token
+    }
+  }
+
+  async verifyEmail(code: string) {
+    const {id: userId, new_email} = this.request.user;
+    const token = this.request.cookies?.[cookieKeys.EmailOtp];
+        if(!token) throw new BadRequestException(AuthMessage.ExistAccount);
+        const {email} =  this.tokenService.verifyEmailToken(token);
+    const otp = await this.checkOtp(userId, code);
+    if(email !== new_email) throw new BadRequestException(publicMessage.somthinWrong);
+    if(otp.method !== AuthMethod.Email) throw new BadRequestException(publicMessage.somthinWrong);
+    await this.userRepository.update({id: userId}, {
+        verify_email: true,
+        email,
+        new_email: null
+    })
+     return {
+        message: User.UpdatedProfile
+     }
+}
+
+
+async changePhone(phone: string) {
+    const { id } = this.request.user;
+    const user = await this.userRepository.findOneBy({phone})
+    if(user && user.id !== id) {
+        throw new ConflictException(User.ExistPhone)
+    } else if(user && user.id == id) {
+        return {
+            message: User.UpdatedProfile
+        }
+    }
+    await this.userRepository.update({id}, {new_phone: phone})
+    const otp = await this.authService.saveOtp(id, AuthMethod.Phone)
+    const token = this.tokenService.createPhoneToken({phone});
+    return {
+        code: otp.code,
+        token
+    }
+  }
+
+  async verifyPhone(code: string) {
+    const {id: userId, new_phone} = this.request.user;
+    const token = this.request.cookies?.[cookieKeys.PhoneOtp];
+        if(!token) throw new BadRequestException(AuthMessage.ExistAccount);
+        const {phone} =  this.tokenService.verifyPhoneToken(token);
+    const otp = await this.checkOtp(userId, code);
+    if(phone !== new_phone) throw new BadRequestException(publicMessage.somthinWrong);
+    if(otp.method !== AuthMethod.Phone) throw new BadRequestException(publicMessage.somthinWrong);
+    await this.userRepository.update({id: userId}, {
+        verify_phone: true,
+        phone,
+        new_phone: null
+    })
+     return {
+        message: User.UpdatedProfile
+     }
+}
+
+
   GetProfile() {
     const user = this.request.user;
     if (!user) {
@@ -83,5 +169,32 @@ export class UserService {
 }
 
 
+
+
+async checkOtp(userId: number, code: string) {
+    const otp = await this.otpRepository.findOneBy({userId});
+    if(!otp) throw new BadRequestException(AuthMessage.NotFoundAccount);
+        const now = new Date();
+        if(now > otp.expiresIn) throw new BadRequestException(AuthMessage.InvaloToken);
+        if(otp.code !== code) throw new BadRequestException(AuthMessage.InvaloToken);
+        return otp;
+}
+
+
+async changeUsername(username: string) {
+    const { id } = this.request.user;
+    const user = await this.userRepository.findOneBy({username})
+    if(user && user.id !== id) {
+        throw new ConflictException(User.ExistUsername)
+    } else if(user && user.id == id) {
+        return {
+            message: User.UpdatedProfile
+        }
+    }
+    await this.userRepository.update({id}, {username});
+    return {
+        message: User.UpdatedProfile
+    }
+}
 
 }

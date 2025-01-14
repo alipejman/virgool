@@ -2,24 +2,28 @@ import {
   Body,
   Controller,
   Get,
-  ParseFilePipe,
+  Patch,
+  Post,
   Put,
   Req,
-  UploadedFiles,
-  UseGuards,
+  Res,
   UseInterceptors,
 } from "@nestjs/common";
 import { UserService } from "./user.service";
 import { ApiBearerAuth, ApiConsumes, ApiTags } from "@nestjs/swagger";
-import { ProfileDto } from "./dto/profile.dto";
+import { ChangeEmailDto, ChangePhoneDto, changeUsernameDto, ProfileDto } from "./dto/profile.dto";
 import { SwaggerForm } from "src/common/enums/swaggerForm.enum";
 import {  FileFieldsInterceptor, FilesInterceptor } from "@nestjs/platform-express";
 import { multerStorage } from "src/common/utils/multer.utils";
 import { AuthGuard } from "../auth/guards/auth.gurad";
 import { avatar } from "./types/files";
 import { uploadedOptionalFiles } from "src/common/decorators/uploadFiles.decorator";
-import { Request } from "express";
+import { Request, Response } from "express";
 import { authDecorator } from "src/common/decorators/auth.decorator";
+import { cookieKeys } from "src/common/enums/cookie.enum";
+import { CookiesOptionToken } from "src/common/utils/cookie.utils";
+import { publicMessage } from "src/common/enums/messages.enum";
+import { checkOtpDto } from "../auth/dto/auth.dto";
 
 @Controller("user")
 @ApiTags("User")
@@ -54,5 +58,45 @@ export class UserController {
   getUserProfile(@Req() request: Request) {
       return this.userService.GetProfile();
   }
+
+
+  @Patch('/change-email')
+  async changeEmail(@Body() emailDto: ChangeEmailDto, @Res() res: Response) {
+    const {code, message, token} = await this.userService.changeEmail(emailDto.email);
+    if(message) return res.json({message});
+    res.cookie(cookieKeys.EmailOtp, token, CookiesOptionToken())
+    res.json({
+      code,
+      message: publicMessage.sendOtp
+    })
+  }
+
+  @Post('/verify-email-otp')
+  async verifyEmail(@Body() otpDto: checkOtpDto) {
+   return this.userService.verifyEmail(otpDto.code)
+  }
+
+  @Patch('/change-phone')
+  async changePhone(@Body() phoneDto: ChangePhoneDto, @Res() res: Response) {
+    const {code, message, token} = await this.userService.changePhone(phoneDto.phone);
+    if(message) return res.json({message});
+    res.cookie(cookieKeys.PhoneOtp, token, CookiesOptionToken())
+    res.json({
+      code,
+      message: publicMessage.sendOtp
+    })
+  }
+
+  @Post('/verify-phone-otp')
+  async verifyPhone(@Body() otpDto: checkOtpDto) {
+   return this.userService.verifyPhone(otpDto.code)
+  }
+
+
+  @Patch('/change-username')
+  async changeUsername(@Body() usernameDto: changeUsernameDto) {
+    return this.userService.changeUsername(usernameDto.username)
+  }
+  
   
 }

@@ -1,5 +1,5 @@
-import { ApiPropertyOptional } from "@nestjs/swagger";
-import { IsEnum, IsOptional, Length } from "class-validator";
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { IsEmail, IsEnum, IsMobilePhone, IsOptional, IsPhoneNumber, IsString, Length } from "class-validator";
 import { CreateDateColumn, UpdateDateColumn } from "typeorm";
 import { userGender } from "../enums/gender.enum";
 
@@ -29,9 +29,27 @@ export class ProfileDto {
     birthday: Date;
     @ApiPropertyOptional({nullable:true})
     linkedin: string;
-    @CreateDateColumn()
-    createdAt: Date;
-    @UpdateDateColumn()
-    updatedAt: Date;
 
+
+}
+
+export class ChangeEmailDto {
+
+    @ApiProperty()
+    @IsEmail({}, {message: "فرمت ایمیل نادرست میباشد"})
+    email: string
+}
+
+export class ChangePhoneDto {
+    @ApiProperty()
+    @IsMobilePhone('fa-IR', {}, {message: "فرمت موبایل نادرست میباشد"})
+    phone: string
+
+}
+
+export class changeUsernameDto {
+    @ApiProperty()
+    @Length(3, 50)
+    @IsString()
+    username: string
 }
