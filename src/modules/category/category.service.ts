@@ -87,4 +87,16 @@ export class CategoryService {
     await this.categoryRepository.remove(category);
     return { message: CategoryMessage.deleted };
   }
+
+  async findOneByTitle(title: string) {
+    title = title?.trim()?.toLowerCase();
+    return await this.categoryRepository.findOneBy({ title });
+  }
+
+  async insertByTitle(title: string) {
+    const category = this.categoryRepository.create({
+      title
+    });
+    return await this.categoryRepository.save(category);
+  }
 } 

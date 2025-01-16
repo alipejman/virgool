@@ -21,6 +21,7 @@ export enum CategoryMessage {
     notFound= "دسته بندی یافت نشد",
     updated= 'دسته بندی با موفقیت ویرایش شد',
     deleted= 'دسته بندی با موفقیت حذف شد',
+    isnottrue= "دسته بندی را به درستی وارد کنید"
 }
 
 export enum User {
@@ -33,4 +34,8 @@ export enum User {
 export enum publicMessage {
     sendOtp= "کد با موفقیت ارسال شد ",
     somthinWrong= "خطایی پیش آمده مجددا تلاش کنید"
+}
+
+export enum BlogMessage {
+    created= "مفاله با موفقیت ایجاد شد"
 }

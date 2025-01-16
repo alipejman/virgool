@@ -165,11 +165,11 @@ export class AuthService {
     const accessToken = this.tokenService.createAccessToken({userId});
     if(otp.method === AuthMethod.Email) {
       await this.userRepository.update({id: userId}, {
-        verify_email: true
+        verifyEmail: true
       })
     } else if(otp.method === AuthMethod.Phone) {
       await this.userRepository.update({id: userId}, {
-        verify_phone: true
+        verifyPhone: true
       })
     }
     return {

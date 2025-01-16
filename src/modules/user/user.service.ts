@@ -90,7 +90,7 @@ export class UserService {
             message: User.UpdatedProfile
         }
     }
-    await this.userRepository.update({id}, {new_email: email})
+    await this.userRepository.update({id}, {newEmail: email})
     const otp = await this.authService.saveOtp(id, AuthMethod.Email)
     const token = this.tokenService.createEmailToken({email});
     return {
@@ -100,17 +100,17 @@ export class UserService {
   }
 
   async verifyEmail(code: string) {
-    const {id: userId, new_email} = this.request.user;
+    const {id: userId, newEmail} = this.request.user;
     const token = this.request.cookies?.[cookieKeys.EmailOtp];
         if(!token) throw new BadRequestException(AuthMessage.ExistAccount);
         const {email} =  this.tokenService.verifyEmailToken(token);
     const otp = await this.checkOtp(userId, code);
-    if(email !== new_email) throw new BadRequestException(publicMessage.somthinWrong);
+    if(email !== newEmail) throw new BadRequestException(publicMessage.somthinWrong);
     if(otp.method !== AuthMethod.Email) throw new BadRequestException(publicMessage.somthinWrong);
     await this.userRepository.update({id: userId}, {
-        verify_email: true,
+        verifyEmail: true,
         email,
-        new_email: null
+        newEmail: null
     })
      return {
         message: User.UpdatedProfile
@@ -128,7 +128,7 @@ async changePhone(phone: string) {
             message: User.UpdatedProfile
         }
     }
-    await this.userRepository.update({id}, {new_phone: phone})
+    await this.userRepository.update({id}, {newPhone: phone})
     const otp = await this.authService.saveOtp(id, AuthMethod.Phone)
     const token = this.tokenService.createPhoneToken({phone});
     return {
@@ -138,17 +138,17 @@ async changePhone(phone: string) {
   }
 
   async verifyPhone(code: string) {
-    const {id: userId, new_phone} = this.request.user;
+    const {id: userId, newPhone} = this.request.user;
     const token = this.request.cookies?.[cookieKeys.PhoneOtp];
         if(!token) throw new BadRequestException(AuthMessage.ExistAccount);
         const {phone} =  this.tokenService.verifyPhoneToken(token);
     const otp = await this.checkOtp(userId, code);
-    if(phone !== new_phone) throw new BadRequestException(publicMessage.somthinWrong);
+    if(phone !== newPhone) throw new BadRequestException(publicMessage.somthinWrong);
     if(otp.method !== AuthMethod.Phone) throw new BadRequestException(publicMessage.somthinWrong);
     await this.userRepository.update({id: userId}, {
-        verify_phone: true,
+        verifyPhone: true,
         phone,
-        new_phone: null
+        newPhone: null
     })
      return {
         message: User.UpdatedProfile
