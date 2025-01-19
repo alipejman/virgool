@@ -1,4 +1,4 @@
-import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { ApiProperty, ApiPropertyOptional, PartialType } from "@nestjs/swagger";
 import { IsNotEmpty, Length } from "class-validator";
 
 export class CraeteBlogDto {
@@ -30,6 +30,9 @@ export class CraeteBlogDto {
     @ApiProperty({type: String, isArray: true})
     categories: string[] | string
 }
+
+export class UpdateBlogDto extends PartialType(CraeteBlogDto){}
+
 
 export class FilterBlogDto {
     category: string;

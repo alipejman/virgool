@@ -33,9 +33,24 @@ export enum User {
 
 export enum publicMessage {
     sendOtp= "کد با موفقیت ارسال شد ",
-    somthinWrong= "خطایی پیش آمده مجددا تلاش کنید"
+    somthinWrong= "خطایی پیش آمده مجددا تلاش کنید",
+    created= "با موفقیت ایجاد شد.."
 }
 
 export enum BlogMessage {
-    created= "مفاله با موفقیت ایجاد شد"
+    created= "مفاله با موفقیت ایجاد شد",
+    updated= "مفاله بروز رسانی شد",
+    delete = " مفاله حذف شد",
+    notFound= "مقاله پیدا نشد",
+    liked= "مقاله با موفقیت لایک شد",
+    notLike= "لایک شما حذف شد",
+    bookmark= "مقاله ذخیره شد",
+    notBookmark= "مقاله از ذخیره ها خارج شد",
+    commentCreate = "نطر شما با موفقیت ثبت شد",
+    acceptedComment= "نظر با موفقیت تایید شد",
+    acceptedAlready= "این نظر از قبل تایید شده بود",
+    rejectedComment= "نظر با موفقیت رد شد",
+    rejectedAlready = "نظر از قبل رد شده بود",
+    NotFound = "مقاله پیدا نشد"
+    
 }
