@@ -18,14 +18,14 @@ import { UserEntity } from "../user/entities/user.entity";
 import { Repository } from "typeorm";
 import { ProfileEntity } from "../user/entities/profile.entity";
 import { otpEntity } from "../user/entities/otp.entity";
-import { JwtService } from "@nestjs/jwt";
 import { tokensService } from "./tokens.service";
-import {  Request, Response } from "express";
+import { Request, Response } from "express";
 import { cookieKeys } from "src/common/enums/cookie.enum";
 import { AuthResponse } from "./types/response";
 import { Scope } from "@nestjs/common";
 import { REQUEST } from "@nestjs/core";
 import { CookiesOptionToken } from "src/common/utils/cookie.utils";
+import { KavenegarService } from "../http/kavenegar.service";
 
 @Injectable({ scope: Scope.REQUEST })
 export class AuthService {
@@ -38,6 +38,7 @@ export class AuthService {
     private readonly otpRepository: Repository<otpEntity>,
     private tokenService: tokensService,
     @Inject(REQUEST) private request: Request,
+    private kavenegarService: KavenegarService
   ) {}
 
   // Check user existence
@@ -47,9 +48,11 @@ export class AuthService {
     switch (type) {
       case AuthType.Login:
         result = await this.login(method, username);
+        await this.sendOtp(method, username, result.code);
         return this.sendResponse(res, result);
       case AuthType.Register:
         result = await this.register(method, username);
+        await this.sendOtp(method, username, result.code);
         return this.sendResponse(res, result);
       default:
         throw new UnauthorizedException(AuthMessage.InValidType);
@@ -99,7 +102,12 @@ export class AuthService {
       otp.expiresIn = expiresIn;
       otp.method = method;
     } else {
-      otp = await this.otpRepository.create({ code, expiresIn, userId, method });
+      otp = await this.otpRepository.create({
+        code,
+        expiresIn,
+        userId,
+        method,
+      });
     }
     otp = await this.otpRepository.save(otp);
     if (!existsOtp) {
@@ -143,49 +151,61 @@ export class AuthService {
     };
   }
 
+  async sendOtp(method: AuthMethod, username: string, code: string) {
+    if (method === AuthMethod.Email) {
+      //sendEmail
+    } else if (method === AuthMethod.Phone) {
+      await this.kavenegarService.sendVerificationSms(username, code);
+    }
+  }
+
   // Send Response
   async sendResponse(res: Response, result: AuthResponse) {
-    const { token, code } = result;
+    const { token } = result;
     res.cookie(cookieKeys.xhssp, token, CookiesOptionToken());
     return res.json({
-      code,
+      message: "کد یک بار مصرف ارسال شد",
     });
   }
 
   // Check OTP
   async checkOtp(code: string) {
     const token = this.request.cookies?.[cookieKeys.xhssp];
-    if(!token) throw new UnauthorizedException(AuthMessage.ExistAccount);
-    const {userId} =  this.tokenService.verifyToken(token);
-    const otp = await this.otpRepository.findOneBy({ userId});
-    if(!otp) throw new UnauthorizedException(AuthMessage.ExistAccount);
+    if (!token) throw new UnauthorizedException(AuthMessage.ExistAccount);
+    const { userId } = this.tokenService.verifyToken(token);
+    const otp = await this.otpRepository.findOneBy({ userId });
+    if (!otp) throw new UnauthorizedException(AuthMessage.ExistAccount);
     const now = new Date();
-    if(now > otp.expiresIn) throw new UnauthorizedException(AuthMessage.InvaloToken);
-    if(otp.code !== code) throw new UnauthorizedException(AuthMessage.InvaloToken);
-    const accessToken = this.tokenService.createAccessToken({userId});
-    if(otp.method === AuthMethod.Email) {
-      await this.userRepository.update({id: userId}, {
-        verifyEmail: true
-      })
-    } else if(otp.method === AuthMethod.Phone) {
-      await this.userRepository.update({id: userId}, {
-        verifyPhone: true
-      })
+    if (now > otp.expiresIn)
+      throw new UnauthorizedException(AuthMessage.InvaloToken);
+    if (otp.code !== code)
+      throw new UnauthorizedException(AuthMessage.InvaloToken);
+    const accessToken = this.tokenService.createAccessToken({ userId });
+    if (otp.method === AuthMethod.Email) {
+      await this.userRepository.update(
+        { id: userId },
+        {
+          verifyEmail: true,
+        }
+      );
+    } else if (otp.method === AuthMethod.Phone) {
+      await this.userRepository.update(
+        { id: userId },
+        {
+          verifyPhone: true,
+        }
+      );
     }
     return {
       message: AuthMessage.SignIn,
       accessToken,
-    }; 
+    };
   }
 
-
-  
   async validateAccessToken(token: string) {
     const { userId } = this.tokenService.verifyAccessToken(token);
     const user = await this.userRepository.findOneBy({ id: userId });
     if (!user) throw new UnauthorizedException(AuthMessage.InvaloToken);
     return user;
-}
-
-
+  }
 }

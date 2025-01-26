@@ -28,13 +28,19 @@ export enum User {
     UpdatedProfile= "پروفایل شما با موفقیت بروز شد",
     ExistEmail= "این ایمیل قبلا ثبت شده است!",
     ExistPhone= "موبایل مورد نظر موجود میباشد",
-    ExistUsername= "نام کاربری قبلا شده"
+    ExistUsername= "نام کاربری قبلا شده",
+    NotFoundUser= "کاربری پیدا نشد",
+    Followed = "با موفقیت دنبال شد",
+    UnFollow = "از لیست دنبال شوندگان حذف شد",
+    Blocked = "حساب کاربری با موفقیت مسدود شد",
+    UnBlocked = "حساب کاربری از حالت مسدود خارج شد",
 }
 
 export enum publicMessage {
     sendOtp= "کد با موفقیت ارسال شد ",
     somthinWrong= "خطایی پیش آمده مجددا تلاش کنید",
-    created= "با موفقیت ایجاد شد.."
+    created= "با موفقیت ایجاد شد..",
+    remove= "حذف شد"
 }
 
 export enum BlogMessage {

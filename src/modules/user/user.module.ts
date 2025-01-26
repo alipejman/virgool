@@ -6,11 +6,12 @@ import { UserEntity } from './entities/user.entity';
 import { ProfileEntity } from './entities/profile.entity';
 import { otpEntity } from './entities/otp.entity';
 import { AuthModule } from '../auth/auth.module';
+import { FollowEntity } from './entities/follow.entity';
 
 @Module({
   imports: [
     AuthModule,
-    TypeOrmModule.forFeature([UserEntity, ProfileEntity, otpEntity])],
+    TypeOrmModule.forFeature([UserEntity, ProfileEntity, otpEntity, FollowEntity])],
   controllers: [UserController],
   providers: [UserService],
   exports: [UserService, TypeOrmModule],
