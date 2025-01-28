@@ -19,6 +19,9 @@ import { FollowEntity } from "./entities/follow.entity";
 import { paginationsDto } from "src/common/dtos/paginations.dto";
 import { paginationGenerator, paginationSolver } from "src/common/utils/pagination.solver";
 import { identity } from "rxjs";
+import { UserBlockDto } from "../auth/dto/auth.dto";
+import { userStatus } from "./enums/status.enum";
+import { Roles } from "../auth/enums/role.enum";
 
 @Injectable({ scope: Scope.REQUEST })
 export class UserService {
@@ -289,6 +292,23 @@ async changeUsername(username: string) {
         return {
             pagination: paginationGenerator(count, page, limit),
             following
+        }
+    }
+
+
+    async blockToggle(blockDto: UserBlockDto) {
+        const {userId} = blockDto;
+        const user = await this.userRepository.findOneBy({id: userId});
+        if(!user) throw new BadRequestException(User.NotFoundUser);
+        let message = User.Blocked;
+        if(user.status === userStatus.Blocked) {
+            message = User.UnBlocked;
+            await this.userRepository.update({id: userId}, {status: null});
+        } else {
+            await this.userRepository.update({id: userId}, {status: userStatus.Blocked});
+        }
+        return {
+            message
         }
     }
 

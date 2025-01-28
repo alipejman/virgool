@@ -1,6 +1,7 @@
 import {
   CanActivate,
   ExecutionContext,
+  ForbiddenException,
   Injectable,
   UnauthorizedException,
 } from "@nestjs/common";
@@ -22,15 +23,17 @@ export class AuthGuard implements CanActivate {
     const request: Request = httpContext.getRequest<Request>();
     const token = this.extractToken(request);
 
-    // اعتبارسنجی توکن و دریافت اطلاعات کاربر
     const user = await this.authService.validateAccessToken(token);
     if (!user) {
       throw new UnauthorizedException(AuthMessage.InvaloToken);
     }
 
-    // اضافه کردن اطلاعات کاربر به درخواست
     request.user = user;
-    return true; // اجازه دسترسی به کاربر
+
+
+    if(request?.user?.status === "Blocked") throw new ForbiddenException(AuthMessage.UserBlocked);
+
+    return true; 
   }
 
   protected extractToken(request: Request): string {

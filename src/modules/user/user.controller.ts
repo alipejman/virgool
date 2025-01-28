@@ -26,7 +26,6 @@ import {
   FilesInterceptor,
 } from "@nestjs/platform-express";
 import { multerStorage } from "src/common/utils/multer.utils";
-import { AuthGuard } from "../auth/guards/auth.gurad";
 import { avatar } from "./types/files";
 import { uploadedOptionalFiles } from "src/common/decorators/uploadFiles.decorator";
 import { Request, Response } from "express";
@@ -34,9 +33,11 @@ import { authDecorator } from "src/common/decorators/auth.decorator";
 import { cookieKeys } from "src/common/enums/cookie.enum";
 import { CookiesOptionToken } from "src/common/utils/cookie.utils";
 import { publicMessage } from "src/common/enums/messages.enum";
-import { checkOtpDto } from "../auth/dto/auth.dto";
+import { checkOtpDto, UserBlockDto } from "../auth/dto/auth.dto";
 import { Pagination } from "src/common/decorators/pagination.decorator";
 import { paginationsDto } from "src/common/dtos/paginations.dto";
+import { CanAccess } from "src/common/decorators/role.decorator";
+import { Roles } from "../auth/enums/role.enum";
 
 @Controller("user")
 @ApiTags("User")
@@ -128,4 +129,9 @@ export class UserController {
     return this.userService.following(paginationDto)
   }
 
+  @Post('block')
+  @CanAccess(Roles.Admin)
+  async block(@Body() blockDto: UserBlockDto) {
+    return this.userService.blockToggle(blockDto)
+  }
 }

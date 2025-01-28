@@ -6,6 +6,7 @@ export enum AuthMessage {
     InvaloToken = 'دوباره وارد شوید',
     NotLoginPleaseLogin = 'لطفا وارد شوید',
     SignIn = 'ورود با موفقیت انجام شد',
+    UserBlocked= "کاربر مورد نظر بلاک است"
 }
 
 export enum BadRequestExeption {

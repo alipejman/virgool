@@ -21,11 +21,13 @@ import { otpEntity } from "../user/entities/otp.entity";
 import { tokensService } from "./tokens.service";
 import { Request, Response } from "express";
 import { cookieKeys } from "src/common/enums/cookie.enum";
-import { AuthResponse } from "./types/response";
+import { AuthResponse, GoogleUser } from "./types/response";
 import { Scope } from "@nestjs/common";
 import { REQUEST } from "@nestjs/core";
 import { CookiesOptionToken } from "src/common/utils/cookie.utils";
 import { KavenegarService } from "../http/kavenegar.service";
+import { randomInt } from "crypto";
+import { randomId } from "src/common/utils/functions.util";
 
 @Injectable({ scope: Scope.REQUEST })
 export class AuthService {
@@ -48,11 +50,11 @@ export class AuthService {
     switch (type) {
       case AuthType.Login:
         result = await this.login(method, username);
-        await this.sendOtp(method, username, result.code);
+        // await this.sendOtp(method, username, result.code);
         return this.sendResponse(res, result);
       case AuthType.Register:
         result = await this.register(method, username);
-        await this.sendOtp(method, username, result.code);
+        // await this.sendOtp(method, username, result.code);
         return this.sendResponse(res, result);
       default:
         throw new UnauthorizedException(AuthMessage.InValidType);
@@ -161,9 +163,10 @@ export class AuthService {
 
   // Send Response
   async sendResponse(res: Response, result: AuthResponse) {
-    const { token } = result;
+    const { token, code } = result;
     res.cookie(cookieKeys.xhssp, token, CookiesOptionToken());
     return res.json({
+      code,
       message: "کد یک بار مصرف ارسال شد",
     });
   }
@@ -208,4 +211,40 @@ export class AuthService {
     if (!user) throw new UnauthorizedException(AuthMessage.InvaloToken);
     return user;
   }
-}
+
+
+  async googleAuth(userData: GoogleUser) {
+    const {firtstName, email, lastName} = userData;
+    let token : string;
+    let user = await this.userRepository.findOneBy({email});
+    if(user) {
+      await this.userRepository.update({email}, {verifyEmail: true});
+      token = await this.tokenService.craeteToken({userId: user.id});
+    } else {
+
+      const username = email.split("@")[0] + randomId();
+      const existingUser = await this.userRepository.findOneBy({ username });
+      if (existingUser) {
+          throw new Error('Username already exists');
+      }
+
+      user = await this.userRepository.create({
+        email,
+        verifyEmail: true,
+        username: email.split("@")[0] + randomId(),
+      });
+      user = await this.userRepository.save(user);
+      let profile = await this.profileRepository.create({
+        userId: user.id,
+        firstName: `${firtstName} ${lastName}`,
+      });
+      profile = await this.profileRepository.save(profile);
+      user.profileId = profile.id;
+      await this.userRepository.save(user);
+      token = await this.tokenService.createAccessToken({userId: user.id});
+    }
+    return {
+      token
+    }
+  }
+} 
